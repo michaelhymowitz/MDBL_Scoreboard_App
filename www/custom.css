@@ -1,0 +1,177 @@
+/*@import url('//fonts.googleapis.com/css?family=Raleway|Cabin:400,700');
+@import url('//fonts.googleapis.com/css?family=Roboto:400,700');/*
+
+body {
+    font-family: Raleway;
+}
+
+/* logo */
+.skin-blue .main-header .logo {
+    background-color: #00274C;
+    /*font-family: Raleway;*/
+}
+
+/* logo when hovered */
+.skin-blue .main-header .logo:hover {
+    background-color: #050a30;
+    /*font-family: Raleway;*/
+}
+
+/* navbar (rest of the header) */
+.skin-blue .main-header .navbar {
+    background-color: #00274C;
+    /*font-family: Raleway;*/
+}
+
+/* main sidebar */
+.skin-blue .main-sidebar {
+    background-color: #FBE6A3;
+    /*font-family: Raleway;*/
+}
+
+/* active selected window in the sidebarmenu */
+.skin-blue .main-sidebar .sidebar .sidebar-menu .active a{
+    background-color: #ECF0F5;
+    /*font-family: Raleway;*/
+}
+
+/* other links in the sidebarmenu */
+.skin-blue .main-sidebar .sidebar .sidebar-menu a{
+    background-color: #FBE6A3;
+    color: #000000;
+    /*font-family: Raleway;*/
+}
+
+/* other links in the sidebarmenu when hovered */
+.skin-blue .main-sidebar .sidebar .sidebar-menu a:hover{
+    background-color: #ECF0F5;
+    /*font-family: Raleway;*/
+}
+
+/* toggle button when hovered  */
+.skin-blue .main-header .navbar .sidebar-toggle:hover{
+    background-color: #050a30;
+}
+
+/* body */
+.content-wrapper, .right-side {
+    background-color: #ffffff;
+    /*font-family: Raleway;*/
+}
+
+/* box titles
+.box-header .box-title {
+    font-family: Raleway;
+}/*
+
+/* outer parameter boxes */
+.box.box-solid.box-primary>.box-header {
+    color: #050a30;
+    background: #FBE6A3;
+}
+
+/* outer parameter boxes */
+.box.box-solid.box-primary{
+    border-bottom-color: #FBE6A3;
+    border-left-color: #FBE6A3;
+    border-right-color: #FBE6A3;
+    border-top-color: #FBE6A3;
+}
+
+/* nested parameter boxes */
+.box.box-solid.box-success>.box-header {
+    color: #fff;
+    background: #00274C;
+}
+
+/* nested parameter boxes */
+.box.box-solid.box-success{
+    border-bottom-color: #00274C;
+    border-left-color: #00274C;
+    border-right-color: #00274C;
+    border-top-color: #00274C;
+} */
+
+/* output boxes
+.box.box-solid.box-warning>.box-header {
+    color: #fff;
+    background: #050a30;
+}
+
+/* output boxes
+.box.box-solid.box-warning{
+    border-bottom-color: #050a30;
+    border-left-color: #050a30;
+    border-right-color: #050a30;
+    border-top-color: #050a30;
+} */
+
+/* value boxes */
+.small-box.bg-blue {
+    background-color: #00274C !important;
+}
+
+/* pop-up boxes' headers 
+.sweet-alert h2 {
+    font-family: Roboto;
+}/*
+
+/* pop-up boxes' bodies 
+.sweet-alert p {
+    font-family: Raleway;
+}/*
+
+/* datatables 
+.dataTable.no-footer {
+    font-family: 'verdana';
+}*/
+
+/* changes ticks on slider */
+.irs-grid-pol.small {
+    height: 0px;
+}
+
+/* fixes multiple scroll bars */
+.wrapper {
+    height: auto !important;
+    position:relative;
+    overflow-x:hidden;
+    overflow-y:hidden
+}
+
+
+#league_scores_box {
+  overflow: auto; /* scroll, hidden, auto, or visible */
+}
+
+ul {
+    list-style-type: square;
+}
+
+/* putting shiny error messages inb middle of page */
+.shiny-notification {
+    position:fixed;
+    top: calc(25%);
+    left: calc(50%);
+}
+
+/* Pando color for shinycustomloader loaders 
+.load-3 .line:nth-last-child(3) {
+    animation: loading3 .6s .3s linear infinite;
+}
+
+.load-3 .line:nth-last-child(2) {
+    animation: loading3 .6s .3s linear infinite;
+}
+
+.load-3 .line:nth-last-child(1) {
+    animation: loading3 .6s .3s linear infinite;
+}
+
+.line {
+    display: inline-block;
+    width: 15px;
+    height: 15px;
+    border-radius: 15px;
+    background-color: #123456;
+} */
