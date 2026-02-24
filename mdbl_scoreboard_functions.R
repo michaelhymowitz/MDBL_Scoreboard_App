@@ -13,7 +13,7 @@ integer_breaks <- function(limits) {
     
     limits %>%
         
-        # use the 'pretty' function to get a good set of numbers
+        # use the "pretty function to get a good set of numbers
         pretty(n = 5) %>%
         
         # filter out non-integer values
@@ -107,30 +107,7 @@ adding_bowler_names <- function(df) {
 common_renames <- function(df) {
     
     df %>%
-        rename(
-            any_of(
-                c(
-                    "Bowler" = "bowler",
-                    "# Sessions" = "num_sessions",
-                    "# Games" = "num_games",
-                    "Total Score" = "total_score",
-                    "Avg Score" = "avg_score",
-                    "Min Score" = "min_score",
-                    "Max Score" = "max_score",
-                    "# Session Wins" = "num_session_wins",
-                    "# Game Wins" = "num_game_wins",
-                    "Points" = "points",
-                    "Strike %" = "strike_rate",
-                    "Spare %" = "spare_rate",
-                    "Non-Split Spare %" = "nonsplit_spare_rate",
-                    "Split Spare %" = "split_spare_rate",
-                    "Single-Pin Spare %" = "single_pin_spare_rate",
-                    "Multi-Pin Spare %" = "multi_pin_spare_rate",
-                    "Avg First Throw" = "avg_first_throw",
-                    "First Throw Gutter %" = "first_throw_gutter_rate"
-                )
-            )
-        )
+        rename(any_of(common_renames_map))
 }
 
 
@@ -194,6 +171,58 @@ factor_bowler_id_by_bowler <- function(df) {
 }
 
 
+#' Function: order_and_clean_stat_names
+#' ---
+#' Orders `stat_name` col based on pre-set order and clean them
+#' ---
+#' Inputs:
+#'     (df): dataframe ordered by `stat_name` col, then cleaned
+#' --
+#' Output:
+#'     df ordered by `stat_name`
+order_and_clean_stat_names <- function(df) {
+    df %>%
+        mutate(
+            stat_name =
+                factor(
+                    stat_name,
+                    levels =
+                        c(
+                            # Appearances
+                            "num_sessions", "num_games",
+                            
+                            # Score Summary
+                            "total_score", "avg_score", "min_score", "max_score",
+                            
+                            # Closed Frames
+                            "strikes", "strike_rate", "spares", "spare_rate",
+                            
+                            # Non-Split vs Split Spares
+                            "nonsplit_spares", "nonsplit_spare_rate",
+                            "split_spares", "split_spare_rate",
+                            
+                            # Single- vs Multi-Pin Spares
+                            "single_pin_spares", "single_pin_spare_rate",
+                            "multi_pin_spares", "multi_pin_spare_rate",
+                            
+                            # 1st Throw
+                            "avg_first_throw", "first_throw_gutter_rate"
+                        ),
+                    ordered = TRUE
+                )
+        ) %>%
+        arrange(stat_name) %>%
+        mutate(stat_name = as.character(stat_name)) %>%
+        left_join(
+            common_renames_map %>%
+                enframe(name = "clean_stat_name", value = "stat_name"),
+            by = join_by(stat_name)
+        ) %>%
+        relocate(clean_stat_name, .before = everything()) %>%
+        select(-stat_name)
+}
+
+
 #' Function: generate_comps_subtitle
 #' ---
 #' Generates subtitles of plots which are simply the competitions listed out
@@ -208,18 +237,6 @@ factor_bowler_id_by_bowler <- function(df) {
 #'     `comps` concatenated, properly separated by commas and "and"
 generate_comps_subtitle <- function(comps) {
     str_flatten_comma(comps, last = if_else(length(comps) == 2, " and ", ", and "))
-}
-
-
-#' Function: require_comps
-#' ---
-#' Controls flow, halts execution if no comps are selected
-#' ---
-#' Inputs:
-#'     (comps): competitions included in data
-require_comps <- function(comps) {
-    req(length(comps) > 0)
-    invisible(NULL)
 }
 
 
@@ -243,39 +260,68 @@ info_popups <- function(input, output, session) {
         shinyalert(
             '<h2>League Standings Explainer</h2>',
             
-            '<p style="text-align: left;">Exact formula for league standings are still subject to change.
-            Currently, 4 components are involved in calculating league standings:</p><br>
-            
-            <ol type "1">
-            <li style="text-align: left;">
-            <strong>Total Score</strong><br>
-            The top 5 players by total score will receive in descending order:
-            15, 10, 6, 3, and 1 point.
-            </li>
-            <br>
-            <li style="text-align: left;">
-            <strong>Average Score</strong><br>
-            The top 5 players by average score who bowl in at least half of the
-            games in the regular season will receive in descending order:
-            15, 10, 6, 3, and 1 point.
-            </li>
-            <br>
-            <li style="text-align: left;">
-            <strong># Session Wins</strong><br>
-            Each session, across all lanes, the bowler who scores the most points
-            across all the games will receive an additional 3 points.
-            </li>
-            <br>
-            <li style="text-align: left;">
-            <strong># Games Wins</strong><br>
-            Each game, across all lanes, the bowler who scores the most points
-            will receive an additional 1 point.
-            </li>
-            </ol>
-            
-            <p style="text-align: left;">The regular season will consist of 12 sessions
-            (tbd). The 10 bowlers (extreme tbd) will qualify for the playoffs
-            (format also tbd)</p>',
+            str_c(
+                '<p style="text-align: left;">Exact formula for league standings are still subject to change.
+                Currently, 4 components are involved in calculating league standings:</p><br>
+                
+                <ol type "1">
+                <li style="text-align: left;">
+                <strong>Total Score</strong><br>
+                The top 5 bowlers by total score will receive in descending order:
+                15, 10, 6, 3, and 1 point.
+                </li>
+                <br>
+                <li style="text-align: left;">
+                <strong>Average Score</strong><br>
+                The top 5 bowlers by average score who bowl in at least half of the
+                games in the regular season (denoted by whether the cell in the
+                `# Games` column is highlighted green) will receive in descending order:
+                15, 10, 6, 3, and 1 point. The current cutoff is',
+                avg_score_games_qualify_cutoff, 'games.
+                </li>
+                <br>
+                <li style="text-align: left;">
+                <strong># Session Wins</strong><br>
+                Each session, across all lanes, the bowler who scores the most points
+                across all the games will receive an additional 3 points.
+                </li>
+                <br>
+                <li style="text-align: left;">
+                <strong># Games Wins</strong><br>
+                Each game, across all lanes, the bowler who scores the most points
+                will receive an additional 1 point.
+                </li>
+                </ol>
+                
+                <br><br>
+                <strong><u>Playoffs</u></strong>
+                <br><br>
+                
+                <p style="text-align: left;">The regular season will consist of
+                12 sessions (tbd). The top 10 bowlers will qualify for the playoffs.
+                The playoffs will take two weeks to complete.</p></br>
+                
+                <ol type "1">
+                <li style="text-align: left;">
+                <strong>Week 1: Semifinals</strong><br>
+                In the semifinals, the 1st, 4th, 5th, 8th, and 10th seeds will bowl
+                on one lane, and the 2nd, 3rd, 6th, 7th, and 9th seeds will bowl
+                on a second lane (everyone else is obviously welcome to come and
+                bowl as well). The top 2 bowlers by total pins on both lanes and
+                the best 3rd-place bowler in the two lanes will qualify for the
+                finals. Each bowler will bowl 3 games.
+                </li>
+                <br>
+                <li style="text-align: left;">
+                <strong>Week 2: Finals</strong><br>
+                In the finals, the 5 bowlers who qualifed will bowl on one lane
+                (again, everyone else is obviously welcome to come and bowl as
+                well). The top bowler over the 3 games will be declared MDBL
+                Champion. 2nd- and 3rd-place will also receive awards.
+                </li>
+                </ol>',
+                sep = " "
+            ),
             
             html = TRUE,
             type = "info",
@@ -338,25 +384,34 @@ info_popups <- function(input, output, session) {
             confirmButtonCol = "#00274C"
         )
     })
-}
     
-    # observeEvent(input$discount_rate_header, {
-    #     shinyalert("Discount Rate",
-    #                "<p>The rate to discount a dollar in any future year when scaling it
-    #            back to the previous year to adjust for the time value of money.</p>",
-    #                html = TRUE, type = "info", confirmButtonCol = "#c2d3e1")
-    # })
-    # 
-    # observeEvent(input$salary_growth_rate_header, {
-    #     shinyalert("Salary Growth Rate",
-    #                "<p>The assumed annual rate of growth of total MLB salary.</p>",
-    #                html = TRUE, type = "info", confirmButtonCol = "#c2d3e1")
-    # })
-    # 
-    # observeEvent(input$adverse_selection_header, {
-    #     shinyalert("Adverse Selection",
-    #                "<p>For additional context behind this table, see the \"Adverse Selection
-    #            and Model Consistency\" document in the data room.</p>",
-    #                html = TRUE, type = "info", confirmButtonCol = "#c2d3e1")
-#     })
-# }
+    # Selected Bowler's Info Popup
+    observeEvent(input$selected_bowler_popup, {
+        shinyalert(
+            '<h2>Note on "Qualified" Ranks</h2>',
+            
+            '<p style="text-align: left;">"Qualified" ranks refers to stats subsetted
+            the set of bowlers who have bowled in at least half of the games in
+            the user-selected competitons in the "Competitions to Include"
+            dropbox at the top of this sheet. There are separate ranks so that
+            bowlers who have note bowled many games do not distort the metrics.</p><br>
+            
+            <p style="text-align: left;">Inspiration for qualified ranks comes
+            from <a href ="https://www.mlb.com/glossary/standard-stats/rate-stats-qualifiers" target="_blank">MLB</a>,
+            where a batter/pitcher must surpass a specific threshold of PA/IP to
+            qualify for end-of-season awards, like the batting champion (highest
+            batting average) or ERA champion (lowest ERA).</p><br>
+            
+            <p style="text-align: left;">Note that this only applies to stats which
+            ends with "%", which denote rate stats. For all other stats,
+            <code>Leaguewide Rank == Qualified Leaguewide Rank</code></p><br>',
+            
+            html = TRUE,
+            type = "info",
+            confirmButtonCol = "#00274C"
+        )
+    })
+}
+
+
+

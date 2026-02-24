@@ -24,8 +24,6 @@ league_overview_tab_ui <-
                     ),
                 width = 12, status = "primary", solidHeader = TRUE, collapsible = TRUE,
                 
-                # TODO: add info popup of how standings are calculated
-                # TODO: do same for stats box
                 # See barrels tab
                 DTOutput("league_standings_table")
             ),
@@ -78,8 +76,6 @@ league_overview_tab_ui <-
 
 # Outputting league standings as a DT::datatable object
 league_standings_table_fn <- function() {
-    
-    # TODO: link each bowler to their page
 
     scores_per_frame_df %>%
         filter(comp == "Regular Season") %>%
@@ -91,8 +87,6 @@ league_standings_table_fn <- function() {
             avg_score = mean(game_score),
             .groups = "drop"
         ) %>%
-        
-        # TODO: do we want to do fraction game-wins / session-wins if tie?
         
         # bringing in game wins
         left_join(
@@ -108,7 +102,9 @@ league_standings_table_fn <- function() {
         left_join(
             scores_per_frame_df %>%
                 filter(comp == "Regular Season") %>%
-                filter(game_score == max(game_score), .by = session_id) %>%
+                group_by(comp, bowler_id, session_id) %>%
+                summarize(session_score = sum(game_score), .groups = "drop") %>%
+                filter(session_score == max(session_score), .by = session_id) %>%
                 group_by(comp, bowler_id) %>%
                 summarize(num_session_wins = n(), .groups = "drop"),
             by = join_by(comp, bowler_id)
@@ -172,10 +168,20 @@ league_standings_table_fn <- function() {
             options = list(pageLength = calculating_page_length("Regular Season")) %>%
                 append(dt_datable_options)
         ) %>%
+        
+        # general formatting
+        formatRound(columns = "Total Score", mark = ",", digits = 0) %>%
         formatRound(columns = "Avg Score", digits = 1) %>%
         formatStyle(
             columns = "Points",
             backgroundColor = "#FBE6A3"
+        ) %>%
+        
+        # denoting whether bowler qualifies for Avg Score points
+        # `- 0.5` so that `>= avg_score_games_qualify_cutoff` is green
+        formatStyle(
+            columns = "# Games",
+            backgroundColor = styleInterval(avg_score_games_qualify_cutoff - 0.5, c("pink", "lightgreen"))
         )
 }
 
@@ -183,7 +189,7 @@ league_standings_table_fn <- function() {
 # Outputting UI wrapper for "League Stats" box content
 league_stats_ui_fn <- function(league_stats_input_in) {
     
-    require_comps(league_stats_input_in$comps)
+    req(length(league_stats_input_in$comps) > 0)
     
     list(
         column(width = 12, br(), hr()),
@@ -197,32 +203,31 @@ league_stats_ui_fn <- function(league_stats_input_in) {
             tabPanel(
                 "Avg Score Post-Frame",
                 DTOutput("league_stats_avg_game_table")
-            )
-        ),
-        
-        column(width = 12, br(), hr()),
-        
-        tabsetPanel(
-            type = "tabs",
+            ),
+            tabPanel(
+                "Avg Score per-Frame",
+                DTOutput("league_stats_avg_frames_table")
+            ),
             tabPanel(
                 "Leaguewide Game Scores",
-                plotOutput("league_stats_leaguewide_scores_plt", height = 1600) #%>%
-                    # withLoader(loader = "loader3")
+                plotOutput("league_stats_leaguewide_scores_plt", height = 1200)
             ),
             tabPanel(
                 "Per Bowler Game Scores",
-                plotOutput("league_stats_per_bowler_scores_plt", height = 1600) #%>%
-                    # withLoader(loader = "loader3")
+                plotOutput("league_stats_per_bowler_scores_plt", height =  1600)
             )
         )
     )
 }
 
+# TODO: should probably put the functions that are used by both tabs in their own file as a helper funciton
+
 
 # Outputting league summary stats as a DT::datatable object
-league_stats_summary_table_fn <- function(league_stats_input_in) {
+league_stats_summary_table_fn <- function(league_stats_input_in, return_as_dt = TRUE, group_by_game = FALSE) {
     
-    require_comps(league_stats_input_in$comps)
+    req(length(league_stats_input_in$comps) > 0)
+    req(!(group_by_game & return_as_dt))
     
     # Summary stats calculated from `scores_per_frame_df`
     summary_stats_by_frame <- scores_per_frame_df %>%
@@ -298,7 +303,14 @@ league_stats_summary_table_fn <- function(league_stats_input_in) {
             is_multi_pin_spare_opp = (is_spare_opp & !is.na(prev_score) & prev_score != "9"),
             is_multi_pin_spare = (is_multi_pin_spare_opp & !is.na(score) & score == "/")
         ) %>%
-        group_by(bowler_id) %>%
+        
+        when(
+            group_by_game ~ (.) %>%
+                group_by(session_id, game_num, bowler_id),
+            !group_by_game ~ (.) %>%
+                group_by(bowler_id)
+        ) %>%
+        
         summarize(
             across(
                 c(
@@ -324,14 +336,6 @@ league_stats_summary_table_fn <- function(league_stats_input_in) {
             split_spare_rate = split_spares / split_spare_opps,
             single_pin_spare_rate = single_pin_spares / single_pin_spare_opps,
             multi_pin_spare_rate = multi_pin_spares / multi_pin_spare_opps
-        ) %>%
-        
-        # remove frequency and opportunity cols, just keeping rate cols
-        select(
-            bowler_id,
-            strike_rate, spare_rate, 
-            nonsplit_spare_rate, split_spare_rate,
-            single_pin_spare_rate, multi_pin_spare_rate
         )
     
     # Summary stats about first throws per frame
@@ -349,24 +353,58 @@ league_stats_summary_table_fn <- function(league_stats_input_in) {
             })
         ) %>%
         
+        when(
+            group_by_game ~ (.) %>%
+                group_by(session_id, game_num, bowler_id),
+            !group_by_game ~ (.) %>%
+                group_by(bowler_id)
+        ) %>%
+        
         # calculating avg score on the first throw, as well as gutter rate
-        group_by(bowler_id) %>%
         summarize(
             avg_first_throw = mean(score_int),
             first_throw_gutter_rate = mean(score_int == 0),
             .groups = "drop"
         )
     
-    # CSS strings for formatting the outputted DT::datatable
-    border_right_css <- "solid 1px"
-    border_right_color_css <- "rgba(0, 0, 0, 0.3)"
-    border_right_all_css = str_c("border-right: ", border_right_css, "; border-right-color: ", border_right_color_css, ";")
+    # For Bowler Profiles
+    if (!return_as_dt) {
+        
+        if (group_by_game) {
+            
+            return(
+                inner_join(
+                    summary_stats_closed_frames,
+                    summary_stats_first_throws,
+                    by = join_by(session_id, game_num, bowler_id)
+                )
+            )
+            
+        } else {
+            return(
+                summary_stats_by_frame %>%
+                    inner_join(summary_stats_closed_frames, by = join_by(bowler_id)) %>%
+                    inner_join(summary_stats_first_throws, by = join_by(bowler_id))
+            )
+        }
+    }
     
     # Joining together all calculated stats and converting to DT::datatable
     summary_stats_by_frame %>%
         
         # joining data together
-        inner_join(summary_stats_closed_frames, by = join_by(bowler_id)) %>%
+        inner_join(
+            summary_stats_closed_frames %>%
+                # remove frequency and opportunity cols, just keeping rate cols
+                select(
+                    bowler_id,
+                    strike_rate, spare_rate, 
+                    nonsplit_spare_rate, split_spare_rate,
+                    single_pin_spare_rate, multi_pin_spare_rate
+                ),
+            
+            by = join_by(bowler_id)
+            ) %>%
         inner_join(summary_stats_first_throws, by = join_by(bowler_id)) %>%
         
         adding_bowler_names() %>%
@@ -394,13 +432,13 @@ league_stats_summary_table_fn <- function(league_stats_input_in) {
                                 # bowler, # sessions, # wins cols
                                 th(rowspan = 1),
                                 th(rowspan = 1),
-                                th(rowspan = 1, style = border_right_all_css),
+                                th(rowspan = 1, style = border_right_solid_all_css),
                                 
                                 # from `summary_stats_by_frame`
-                                th(colspan = 4, "Score Summary", style = border_right_all_css),
+                                th(colspan = 4, "Score Summary", style = border_right_solid_all_css),
                                 
                                 # from `summary_stats_closed_frames`
-                                th(colspan = 6, "Closed Frame Rates", style = border_right_all_css),
+                                th(colspan = 6, "Closed Frame Rates", style = border_right_solid_all_css),
                                 
                                 # from `summary_stats_first_throws`
                                 th(colspan = 2, "1st Throw")
@@ -416,7 +454,7 @@ league_stats_summary_table_fn <- function(league_stats_input_in) {
                                     # cant use `map()`
                                     lapply(function(colname) {
                                         if (colname %in% c("# Games", "Max Score", "Multi-Pin Spare %")) {
-                                            th(colname, style = border_right_all_css)
+                                            th(colname, style = border_right_solid_all_css)
                                         } else {
                                             th(colname)
                                         }
@@ -430,10 +468,12 @@ league_stats_summary_table_fn <- function(league_stats_input_in) {
         # adding right border across entire cols at the end of spanners
         formatStyle(
             columns = c("# Games", "Max Score", "Multi-Pin Spare %"),
-            `border-right` = border_right_css,
+            `border-right` = border_right_solid_css,
             `border-right-color` = border_right_color_css
         ) %>%
         
+        # general formatting
+        formatRound(columns = "Total Score", mark = ",", digits = 0) %>%
         formatRound(
             columns = c("Avg Score", "Avg First Throw"),
             digits = 1
@@ -453,23 +493,28 @@ league_stats_summary_table_fn <- function(league_stats_input_in) {
 }
 
 # Outputting league avg game as a DT::datatable object
-# TODO: this could also be graph
-league_stats_avg_game_table_fn <- function(league_stats_input_in) {
+# TODO: this could also be graph, but not needed
+league_stats_avg_game_table_fn <- function(league_stats_input_in, return_as_dt = TRUE) {
     
-    require_comps(league_stats_input_in$comps)
+    req(length(league_stats_input_in$comps) > 0)
     
-    scores_per_frame_df %>%
+    avg_game_table <- scores_per_frame_df %>%
         filter(comp %in% league_stats_input_in$comps) %>%
         
         duplicate_df_for_leaguewide() %>%
         
         # calculating avg score at the end of each frame
         group_by(bowler_id) %>%
-        summarize(across(f1:f10, mean)) %>%
-        
+        summarize(across(f1:f10, mean))
+    
+    if (!return_as_dt) {
+        return(avg_game_table)
+    }
+    
+    avg_game_table %>%
+        rename_with(function(col) str_replace(col, "f", "F")) %>%
         adding_bowler_names() %>%
         common_renames() %>%
-        rename_with(function(col) str_replace(col, "f", "F")) %>%
         datatable(
             rownames = FALSE,
             # caption = tags$caption(
@@ -479,6 +524,79 @@ league_stats_avg_game_table_fn <- function(league_stats_input_in) {
             options = list(calculating_page_length(league_stats_input_in$comps)) %>%
                 append(dt_datable_options)
         ) %>%
+        
+        # general formatting
+        formatRound(columns = str_c("F", 1:10), digits = 1) %>%
+        formatStyle(
+            columns = "Bowler",
+            target = "row",
+            backgroundColor = styleEqual("Leaguewide", "lightgray")
+        )
+}
+
+
+# Outputting avg score per frame as a DT::datatable object
+# TODO: this could also be graph, but not needed
+league_stats_avg_frames_table_fn <- function(league_stats_input_in, return_as_dt = TRUE) {
+    
+    req(length(league_stats_input_in$comps) > 0)
+    
+    avg_game_frame_table <- league_stats_input_in %>%
+        league_stats_avg_game_table_fn(return_as_dt = FALSE) %>%
+        pivot_longer(
+            cols = -bowler_id,
+            names_to = "frame",
+            values_to = "avg_score_post_frame"
+        ) %>%
+        
+        mutate(frame = factor(frame, levels = str_c("f", 1:10), ordered = TRUE)) %>%
+        arrange(bowler_id, frame) %>%
+        
+        # calculating points per frame
+        mutate(
+            prev_frame_avg_score_post_frame =
+                lag(avg_score_post_frame, n = 1, default = NA_real_),
+            avg_pts_per_frame =
+                if_else(
+                    frame == "f1",
+                    avg_score_post_frame,
+                    avg_score_post_frame - prev_frame_avg_score_post_frame
+                )
+        ) %>%
+        select(-prev_frame_avg_score_post_frame)
+    
+    if (!return_as_dt) {
+        return(avg_game_frame_table)
+    }
+    
+    avg_game_frame_table %>%
+        
+        # reorganizing table back to wide form
+        pivot_longer(
+            cols = c(avg_score_post_frame, avg_pts_per_frame),
+            names_to = "stat_name",
+            values_to = "stat_value"
+        ) %>%
+        pivot_wider(
+            names_from = frame,
+            values_from = stat_value
+        ) %>%
+        rename_with(function(col) str_replace(col, "f", "F")) %>%
+        filter(stat_name == "avg_pts_per_frame") %>%
+        select(-stat_name) %>%
+        adding_bowler_names() %>%
+        common_renames() %>%
+        datatable(
+            rownames = FALSE,
+            # caption = tags$caption(
+            #     style = "caption-side: top; text-align: left; color: black; font-size: 200%; text-decoration: underline;",
+            #     "Average Score Post-Frame"
+            # ),
+            options = list(calculating_page_length(league_stats_input_in$comps)) %>%
+                append(dt_datable_options)
+        ) %>%
+        
+        # general formatting
         formatRound(columns = str_c("F", 1:10), digits = 1) %>%
         formatStyle(
             columns = "Bowler",
@@ -491,10 +609,7 @@ league_stats_avg_game_table_fn <- function(league_stats_input_in) {
 # Plotting histogram of league scores 
 league_stats_hist_scores_plt_fn <- function(league_stats_input_in, per_bowler) {
     
-    require_comps(league_stats_input_in$comps)
-    
-    # # size of bins in outputted plot
-    # bin_size <- 10L
+    req(length(league_stats_input_in$comps) > 0)
     
     scores_per_frame_df %>%
         filter(comp %in% league_stats_input_in$comps) %>%
@@ -520,7 +635,7 @@ league_stats_hist_scores_plt_fn <- function(league_stats_input_in, per_bowler) {
                 ),
         ) %>%
         
-        # ensures faceted plot will be ordered by player name
+        # ensures faceted plot will be ordered by bowler name
         when(
             per_bowler ~ (.) %>%
                 factor_bowler_id_by_bowler(),
@@ -575,71 +690,73 @@ league_stats_hist_scores_plt_fn <- function(league_stats_input_in, per_bowler) {
 }
 
 # Plotting lineplot of league scores 
-league_stats_temporal_scores_plt_fn <- function(league_stats_input_in, per_bowler, per_game, remove_title = FALSE) {
+league_stats_temporal_scores_plt_fn <- function(league_stats_input_in, per_bowler, remove_title = FALSE) {
     
     # TODO: if multiple sessions occur on single day, must edit this func
     
-    require_comps(league_stats_input_in$comps)
-    
-    date_label_format <- "%m/%d/%y"
+    req(length(league_stats_input_in$comps) > 0)
     
     scores_per_frame_df %>%
         filter(comp %in% league_stats_input_in$comps) %>%
         
         when(
-            per_bowler & per_game ~ (.) %>%
+            per_bowler ~ (.) %>%
                 select(session_id, game_num, bowler_id, game_score),
             
-            per_bowler & !per_game ~ (.) %>%
-                group_by(session_id, bowler_id) %>%
-                summarize(session_score = mean(game_score), .groups = "drop") %>%
-                select(session_id, bowler_id, session_score),
-            
-            !per_bowler & per_game ~ (.) %>%
+            !per_bowler ~ (.) %>%
                 group_by(session_id, game_num) %>%
                 summarize(game_score = mean(game_score), .groups = "drop") %>%
-                select(session_id, game_num, game_score),
+                select(session_id, game_num, game_score)
+        ) %>%
+        
+        # bringing in bowling_alley and competition
+        left_join(
+            sessions_df %>%
+                select(session_id, comp, bowling_alley),
+            by = join_by(session_id)
             
-            !per_bowler & !per_game ~ (.) %>%
-                group_by(session_id) %>%
-                summarize(session_score = mean(game_score), .groups = "drop") %>%
-                select(session_id, session_score)
         ) %>%
         
-        when(
-            per_game ~ (.) %>%
-               left_join(
-                   date_game_plt_labels %>%
-                       distinct(session_id, game_num, date_game_num_label),
-                   by = join_by(session_id, game_num)
-               ),
-            !per_game ~ (.) %>%
-                left_join(
-                    date_game_plt_labels %>%
-                        distinct(session_id, date_label),
-                    by = join_by(session_id)
-                )
-        ) %>%
-        
-        # ensures faceted plot will be ordered by player name
+        # adding game number into season (per bowler)
+        # for `per_bowler`, factoring `bowler_id` by `bowler` alphabetical order
+        # also adding linetype_style style, which is linetype style for border
+        # when `!per_bowler` (dont need to do this when `per_bowler`)
+        mutate(sessionid_game_num = str_c(session_id, game_num, sep = "-")) %>%
         when(
             per_bowler ~ (.) %>%
+                arrange(bowler_id, session_id, game_num) %>%
+                mutate(
+                    prev_sessionid_game_num = lag(sessionid_game_num, n = 1, default = NA_character_),
+                    is_new_sessionid_game_num =
+                        is.na(prev_sessionid_game_num) | 
+                        (!is.na(prev_sessionid_game_num) & prev_sessionid_game_num != sessionid_game_num),
+                    game_num_into_season = cumsum(is_new_sessionid_game_num),
+                    .by = bowler_id
+                ) %>%
+                
+                # ensures faceted plot will be ordered by bowler name
                 factor_bowler_id_by_bowler(),
-            !per_bowler ~ (.)
-        ) %>%
-        
-        rename(
-            any_of(
-                c(
-                    "session_or_game_label" = "date_game_num_label",
-                    "session_or_game_label" = "date_label",
-                    "score" = "game_score",
-                    "score" = "session_score"
+            
+            !per_bowler ~ (.) %>%
+                arrange(session_id, game_num) %>%
+                mutate(
+                    prev_sessionid_game_num = lag(sessionid_game_num, n = 1, default = NA_character_),
+                    is_new_sessionid_game_num =
+                        is.na(prev_sessionid_game_num) | 
+                        (!is.na(prev_sessionid_game_num) & prev_sessionid_game_num != sessionid_game_num),
+                    game_num_into_season = cumsum(is_new_sessionid_game_num),
+                    
+                    # dotted border vs solid border
+                    linetype_style =
+                        case_when(
+                            comp == "Preseason" ~ "dotted",
+                            comp == "Regular Season" ~ "solid"
+                        )
                 )
-            )
         ) %>%
+        select(-c(sessionid_game_num, prev_sessionid_game_num, is_new_sessionid_game_num)) %>%
         
-        ggplot(aes(x = session_or_game_label, y = score, group = 1)) +
+        ggplot(aes(x = game_num_into_season, y = game_score, group = 1)) +
         geom_line() +
         
         # faceting plot
@@ -647,26 +764,68 @@ league_stats_temporal_scores_plt_fn <- function(league_stats_input_in, per_bowle
             if (per_bowler) {
                 list(
                     facet_wrap(~bowler_id, labeller = per_bowler_labeller),
-                    geom_point(),
-                    rotate_x_axis_labels_90d,
+                    geom_point(
+                        aes(
+                            color = bowling_alley,
+                            shape = comp,
+                        ),
+                        size = 3
+                    ),
                     
                     # looks weird to have when unfaceted, too much empty space
-                    scale_y_continuous(limits = c(0, NA))
+                    scale_y_continuous(limits = c(0, NA)),
+                    
+                    scale_shape_manual(values = c("Preseason" = 1, "Regular Season" = 16)),
+                    
+                    labs(
+                        color = "Bowling Alley",
+                        shape = "Competition"
+                    )
                 )
             } else {
-                geom_label(
-                    aes(label = round(score, digits = 1)),
-                    family = plot_font_name,
-                    size = 7
+                list(
+                    geom_label(
+                        aes(
+                            label = round(game_score, digits = 1),
+                            color = bowling_alley,
+                            linetype = linetype_style
+                        ),
+                        family = plot_font_name,
+                        size = 7,
+                        linewidth = 1
+                    ),
+                    
+                    scale_linetype_manual(
+                        values = c("dotted" = "dotted", "solid" = "solid"),
+                        labels = c("dotted" = "Preseason  ", "solid" = "Regular Season")
+                    ),
+                    guides(
+                        color = guide_legend(override.aes = list(label = "\u2022")),
+                        linetype = guide_legend(override.aes = list(label = "\u2022")),
+                    ),
+                    labs(
+                        color = "Bowling Alley",
+                        linetype = "Competition"
+                    )
                 )
             }
         } +
         
+        # hacky way to space legend
+        scale_color_discrete(
+            labels = 
+                c(
+                    "Avondale ",
+                    "Waveland Bowl ",
+                    "Whirlyball "
+                )
+        ) +
+
         {
             if (remove_title) {
                 labs(
-                    x = if_else(per_game, "Game", "Date"),
-                    y = "Score"
+                    x = "Season Game #",
+                    y = "Game Score"
                 )
             } else {
                 labs(
@@ -674,16 +833,18 @@ league_stats_temporal_scores_plt_fn <- function(league_stats_input_in, per_bowle
                         str_c(
                             "MDBL",
                             if_else(per_bowler, "per Bowler", "Leaguewide"),
-                            if_else(per_game, "Game", "Session"),
+                            "Game",
                             "Scores",
                             sep = " "
                         ),
                     subtitle = generate_comps_subtitle(league_stats_input_in$comps),
-                    x = if_else(per_game, "Game", "Date"),
+                    x = "Season Game #",
                     y = "Score" 
                 )
             }
-        }
+        } +
+        
+        scale_x_continuous(breaks = integer_breaks)
 }
 
 # Creating and combining histogram and lineplot of game scores
@@ -691,7 +852,7 @@ generate_league_scores_plots <- function(league_stats_input_in, per_bowler = FAL
     
     plot_grid(
         league_stats_hist_scores_plt_fn(league_stats_input_in, per_bowler = per_bowler),
-        league_stats_temporal_scores_plt_fn(league_stats_input_in, per_bowler = per_bowler, per_game = TRUE, remove_title = TRUE),
+        league_stats_temporal_scores_plt_fn(league_stats_input_in, per_bowler = per_bowler, remove_title = TRUE),
         ncol = 1,
         rel_heights = c(0.55, 0.45)
     )

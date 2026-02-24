@@ -10,11 +10,13 @@ library(DT) # Package for dataframe visualizations
 library(shinyWidgets)
 library(ggthemes) # theme_fivethirtyeight()
 library(cowplot) # combine plots and add logo
-# library(shinycustomloader) # Shiny loaders
-# library(pkgcond) # suppress_messages()
 library(sysfonts)
 library(showtext)
 library(shinyalert) # Allows for the pop-up boxes when a box's info icon is pressed
+library(scales)
+library(ggh4x) # facetted_pos_scales()
+
+options(shiny.sanitize.errors = TRUE)
 
 # Adding Roboto font to shinyapps.io, so that it can be used in plots
 plot_font_name <- "Roboto"
@@ -36,7 +38,10 @@ system('fc-cache -f ~/.fonts')
 # showtext_auto()
 
 
- # https://debruine.github.io/shinyintro/data.html
+showtext_opts(dpi = 72)
+
+
+# https://debruine.github.io/shinyintro/data.html
 # Getting access to my (Michael Hymowitz's) google drive, so that the
 # scorekeeper data can be downloaded in
 drive_auth(cache = ".secrets", email = "michael.hymowitz@gmail.com")

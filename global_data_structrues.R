@@ -136,46 +136,110 @@ avg_score_games_qualify_cutoff <- scores_per_frame_df %>%
 #### Contains the labels in the correct order to identify dates and games ######
 # Use the ordering of the cols for factor levels
 
-date_game_plt_labels <- scores_per_frame_df %>%
-    distinct(session_id, game_num) %>%
-    left_join(
-        sessions_df %>%
-            select(session_id, date),
-        by = join_by(session_id)
-    ) %>%
-    
-    # ensuring correct ordering
-    arrange(date) %>%
-    
-    # formatting with just date and date-game combo
-    mutate(
-        date_label = format(date, DATE_PLOT_FORMAT),
-        date_game_num_label = str_c(date_label, game_num, sep = " - "),
-        
-        date_label =
-            factor(
-                date_label,
-                levels = unique(date_label),
-                ordered = TRUE
-            ),
-        date_game_num_label =
-            factor(
-                date_game_num_label,
-                levels = unique(date_game_num_label),
-                ordered = TRUE
-            )
-    )
-
-
-#### `labeller()` object for per bowler facet plots ############################
-
-per_bowler_labeller <- labeller(
-    bowler_id = bowlers_df %>%
-        pull(var = bowler, name = bowler_id)
-)
+# date_game_plt_labels <- scores_per_frame_df %>%
+#     distinct(session_id, game_num) %>%
+#     left_join(
+#         sessions_df %>%
+#             select(session_id, date),
+#         by = join_by(session_id)
+#     ) %>%
+#     
+#     # ensuring correct ordering
+#     arrange(date) %>%
+#     
+#     # formatting with just date and date-game combo
+#     mutate(
+#         date_label = format(date, DATE_PLOT_FORMAT),
+#         date_game_num_label = str_c(date_label, game_num, sep = " - "),
+#         
+#         date_label =
+#             factor(
+#                 date_label,
+#                 levels = unique(date_label),
+#                 ordered = TRUE
+#             ),
+#         date_game_num_label =
+#             factor(
+#                 date_game_num_label,
+#                 levels = unique(date_game_num_label),
+#                 ordered = TRUE
+#             )
+#     )
 
 
 #### `theme()` object to rotate x-axis labels 90 degrees #######################
 
 rotate_x_axis_labels_90d <-
     theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+
+
+#### vector map from clean column names to original name in dataset ############
+
+common_renames_map <- c(
+    "Date" = "date",
+    "Season #" = "season_num",
+    "Comp" = "comp",
+    "Matchweek" = "matchweek",
+    "Bowling Alley" = "bowling_alley",
+    "Game #" = "game_num",
+    "Lane #" = "lane_num",
+    "Bowler" = "bowler",
+    "# Sessions" = "num_sessions",
+    "# Games" = "num_games",
+    "Total Score" = "total_score",
+    "Avg Score" = "avg_score",
+    "Min Score" = "min_score",
+    "Max Score" = "max_score",
+    "Game Score" = "game_score",
+    "# Session Wins" = "num_session_wins",
+    "# Game Wins" = "num_game_wins",
+    "Points" = "points",
+    "# Strikes" = "strikes",
+    "Strike %" = "strike_rate",
+    "# Spares" = "spares",
+    "Spare %" = "spare_rate",
+    "# Non-Split Spares" = "nonsplit_spares",
+    "Non-Split Spare %" = "nonsplit_spare_rate",
+    "# Split Spares" = "split_spares",
+    "Split Spare %" = "split_spare_rate",
+    "# Single-Pin Spares" = "single_pin_spares",
+    "Single-Pin Spare %" = "single_pin_spare_rate",
+    "# Multi-Pin Spares" = "multi_pin_spares",
+    "Multi-Pin Spare %" = "multi_pin_spare_rate",
+    "Avg First Throw" = "avg_first_throw",
+    "First Throw Gutter %" = "first_throw_gutter_rate"
+)
+
+
+#### Stats that can be calculated on a per-game basis ##########################
+
+per_game_stats <- 
+    c(
+        "game_score", "strikes", "strike_rate", "spares", "spare_rate",
+        "nonsplit_spares", "nonsplit_spare_rate", "split_spares", "split_spare_rate",
+        "single_pin_spares", "single_pin_spare_rate", "multi_pin_spares", "multi_pin_spare_rate",
+        "avg_first_throw", "first_throw_gutter_rate"
+    )
+
+
+#### `labeller()` objects for facet plots ######################################
+
+per_bowler_labeller <- labeller(
+    bowler_id = bowlers_df %>%
+        pull(var = bowler, name = bowler_id)
+)
+
+per_stat_labeller <- labeller(
+    stat_name = set_names(names(common_renames_map), unname(common_renames_map))
+)
+
+
+#### CSS stylizing strings for `DT::datatable()` ###############################
+
+# CSS strings for formatting the outputted DT::datatable
+border_right_solid_css <- "solid 1px"
+border_right_dotted_css <- "dotted 1px"
+border_right_color_css <- "rgba(0, 0, 0, 0.3)"
+border_right_solid_all_css = str_c("border-right: ", border_right_solid_css, "; border-right-color: ", border_right_color_css, ";")
+border_right_dotted_all_css = str_c("border-right: ", border_right_dotted_css, "; border-right-color: ", border_right_color_css, ";")
+
