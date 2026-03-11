@@ -813,12 +813,12 @@ league_stats_temporal_scores_plt_fn <- function(league_stats_input_in, per_bowle
         
         # hacky way to space legend
         scale_color_discrete(
-            labels = 
-                c(
-                    "Avondale ",
-                    "Waveland Bowl ",
-                    "Whirlyball "
-                )
+            labels = sessions_df %>%
+                filter(comp %in% league_stats_input_in$comps) %>%
+                .$bowling_alley %>%
+                unique() %>%
+                sort() %>%
+                str_c(" ")
         ) +
 
         {

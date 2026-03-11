@@ -459,6 +459,7 @@ bowler_profile_scoresheets_table_fn <- function(bowler_profiles_input_in) {
                 
                 mutate(row_type = "per_frame", .before = everything())
         ) %>%
+        filter(comp %in% bowler_profiles_input_in$comps) %>%
         arrange(session_id, game_num, desc(row_type == "per_throw")) %>%
         select(-comp, -bowler) %>%
         
