@@ -51,7 +51,7 @@ league_overview_tab_ui <-
                     pickerInput(
                         inputId = "league_stats_comps_input",
                         label = "Competitions to Include",
-                        choices = c("Preseason", "Regular Season"),
+                        choices = c("Friendly", "Regular Season", "Playoffs"),
                         options = list(`actions-box` = TRUE),
                         multiple = TRUE
                     )
@@ -749,8 +749,9 @@ league_stats_temporal_scores_plt_fn <- function(league_stats_input_in, per_bowle
                     # dotted border vs solid border
                     linetype_style =
                         case_when(
-                            comp == "Preseason" ~ "dotted",
-                            comp == "Regular Season" ~ "solid"
+                            comp == "Friendly" ~ "dotted",
+                            comp == "Regular Season" ~ "solid",
+                            comp == "Playoffs" ~ "longdash"
                         )
                 )
         ) %>%
@@ -775,7 +776,14 @@ league_stats_temporal_scores_plt_fn <- function(league_stats_input_in, per_bowle
                     # looks weird to have when unfaceted, too much empty space
                     scale_y_continuous(limits = c(0, NA)),
                     
-                    scale_shape_manual(values = c("Preseason" = 1, "Regular Season" = 16)),
+                    scale_shape_manual(
+                        values =
+                            c(
+                                "Friendly" = 1,
+                                "Regular Season" = 16,
+                                "Playoffs" = 15
+                            )
+                    ),
                     
                     labs(
                         color = "Bowling Alley",
@@ -796,8 +804,8 @@ league_stats_temporal_scores_plt_fn <- function(league_stats_input_in, per_bowle
                     ),
                     
                     scale_linetype_manual(
-                        values = c("dotted" = "dotted", "solid" = "solid"),
-                        labels = c("dotted" = "Preseason  ", "solid" = "Regular Season")
+                        values = c("dotted" = "dotted", "solid" = "solid", "longdash" = "longdash"),
+                        labels = c("dotted" = "Friendly  ", "solid" = "Regular Season  ", "longdash" = "Playoffs")
                     ),
                     guides(
                         color = guide_legend(override.aes = list(label = "\u2022")),

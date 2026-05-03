@@ -27,7 +27,7 @@ file.copy(str_c("www/", plot_font_name, "-Italic.ttf"), "~/.fonts")
 file.copy(str_c("www/", plot_font_name, "-BoldItalic.ttf"), "~/.fonts")
 system('fc-cache -f ~/.fonts')
 
-# Uncomment when running locally
+# # Uncomment when running locally
 # font_add(
 #     family = plot_font_name,
 #     regular = str_c("www/", plot_font_name, "-Regular.ttf"),

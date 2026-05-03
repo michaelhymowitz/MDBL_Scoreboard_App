@@ -32,8 +32,9 @@ sessions_df <- mdbl_scoreboard_raw_excel_filename %>%
         num_lanes = `Number of Lanes`
     ) %>%
     mutate(
-        across(c(session_id, weekday, comp, bowling_alley), as.character),
-        across(c(season_num, matchweek, num_lanes), as.integer),
+        across(c(session_id, weekday, comp, matchweek, bowling_alley), as.character),
+        matchweek = str_remove(matchweek, "\\.0$"),
+        across(c(season_num, num_lanes), as.integer),
         date = as_date(date),
         across(c(start_time, end_time), as_datetime)
     )

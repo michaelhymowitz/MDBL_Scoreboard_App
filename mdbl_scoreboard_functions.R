@@ -298,7 +298,7 @@ info_popups <- function(input, output, session) {
                 <br><br>
                 
                 <p style="text-align: left;">The regular season will consist of
-                12 sessions (tbd). The top 10 bowlers will qualify for the playoffs.
+                12 sessions. The top 10 bowlers will qualify for the playoffs.
                 The playoffs will take two weeks to complete.</p></br>
                 
                 <ol type "1">

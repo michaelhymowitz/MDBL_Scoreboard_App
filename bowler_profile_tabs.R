@@ -29,7 +29,7 @@ bowler_profiles_tab_ui <-
                     pickerInput(
                         inputId = "bowler_profiles_comps_input",
                         label = "Competitions to Include",
-                        choices = c("Preseason", "Regular Season"),
+                        choices = c("Friendly", "Regular Season", "Playoffs"),
                         options = list(`actions-box` = TRUE),
                         multiple = TRUE
                     )
@@ -757,8 +757,9 @@ bowler_profile_stats_per_game_plt_fn <- function(bowler_profiles_input_in, bowle
             # dotted border vs solid border
             linetype_style =
                 case_when(
-                    comp == "Preseason" ~ "dotted",
-                    comp == "Regular Season" ~ "solid"
+                    comp == "Friendly" ~ "dotted",
+                    comp == "Regular Season" ~ "solid",
+                    comp == "Playoffs" ~ "longdash"
                 ),
             
             # ensures facet plots are ordered as selected
@@ -786,8 +787,8 @@ bowler_profile_stats_per_game_plt_fn <- function(bowler_profiles_input_in, bowle
         
         # specifying linetype style and legend values for competition
         scale_linetype_manual(
-            values = c("dotted" = "dotted", "solid" = "solid"),
-            labels = c("dotted" = "Preseason", "solid" = "Regular Season")
+            values = c("dotted" = "dotted", "solid" = "solid", "longdash" = "longdash"),
+            labels = c("dotted" = "Friendly", "solid" = "Regular Season", "longdash" = "Playoffs")
         ) +
         
         facet_wrap(~stat_name, ncol = 1, scales = "free_y", labeller = per_stat_labeller) +
