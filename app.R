@@ -25,7 +25,7 @@ ui <-
             sidebarMenu(
                 id = "tabs",
                 menuItem(
-                    text = "League Overview",
+                    text = str_c("League Overview - Season ", CURRENT_SEASON_NUM),
                     tabName = "league_overview_tab",
                     icon = icon("people-group")
                 ),
@@ -60,6 +60,11 @@ server <- function(input, output, session) {
     # Reactive variable to control workflow of league_overview_tab "League Stats" box
     league_stats_input <-
         reactiveValues(
+            
+            # Added for consistency with "Bowler Profiles" tab
+            # Needed for `req()` calls
+            season_nums = CURRENT_SEASON_NUM,
+            
             comps = vector("character", 0L)
         )
     
@@ -112,12 +117,14 @@ server <- function(input, output, session) {
     bowler_profiles_input <-
         reactiveValues(
             bowler_id = vector("character", 0L),
+            season_nums = vector("integer", 0L),
             comps = vector("character", 0L)
         )
     
     # Updating bowler_profiles_input after bowler_profiles_input_button is selected
     observeEvent(input$bowler_profiles_input_button, {
         bowler_profiles_input$bowler_id <- input$bowler_profiles_bowler_id_input
+        bowler_profiles_input$season_nums <- input$bowler_profiles_season_nums_input
         bowler_profiles_input$comps <- input$bowler_profiles_comps_input
     })
     

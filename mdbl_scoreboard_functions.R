@@ -64,7 +64,7 @@ duplicate_df_for_leaguewide <- function(df) {
 calculating_page_length <- function(comps) {
     
     scores_per_frame_df %>%
-        filter(comp %in% comps) %>%
+        filter(comp %in% comps, season_num == CURRENT_SEASON_NUM) %>%
         distinct(bowler_id) %>%
         nrow() %>%
         
@@ -99,7 +99,7 @@ adding_bowler_names <- function(df) {
             
             # cleaning data
             relocate(bowler, .before = everything()) %>%
-            arrange(bowler_id == "__leaguewide__", bowler) %>%
+            arrange(bowler_id == "__leaguewide__", bowler_id == "__celebrity__", bowler) %>%
             select(-bowler_id) 
 }
 
@@ -261,8 +261,7 @@ info_popups <- function(input, output, session) {
             '<h2>League Standings Explainer</h2>',
             
             str_c(
-                '<p style="text-align: left;">Exact formula for league standings are still subject to change.
-                Currently, 4 components are involved in calculating league standings:</p><br>
+                '<p style="text-align: left;">4 components are involved in calculating league standings:</p><br>
                 
                 <ol type "1">
                 <li style="text-align: left;">
@@ -277,7 +276,10 @@ info_popups <- function(input, output, session) {
                 games in the regular season (denoted by whether the cell in the
                 `# Games` column is highlighted green) will receive in descending order:
                 15, 10, 6, 3, and 1 point. The current cutoff is',
-                avg_score_games_qualify_cutoff, 'games.
+                avg_score_games_qualify_cutoff %>%
+                    filter(season_num == CURRENT_SEASON_NUM) %>%
+                    .$cutoff,
+                'games.
                 </li>
                 <br>
                 <li style="text-align: left;">

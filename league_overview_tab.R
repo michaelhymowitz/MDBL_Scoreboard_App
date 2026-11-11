@@ -51,7 +51,13 @@ league_overview_tab_ui <-
                     pickerInput(
                         inputId = "league_stats_comps_input",
                         label = "Competitions to Include",
-                        choices = c("Friendly", "Regular Season", "Playoffs"),
+                        choices = sessions_df %>%
+                            filter(season_num == CURRENT_SEASON_NUM) %>%
+                            .$comp %>%
+                            unique() %>%
+                            factor(levels = c("Friendly", "Regular Season", "Playoffs")) %>%
+                            sort() %>% 
+                            as.character(),
                         options = list(`actions-box` = TRUE),
                         multiple = TRUE
                     )
@@ -78,7 +84,7 @@ league_overview_tab_ui <-
 league_standings_table_fn <- function() {
 
     scores_per_frame_df %>%
-        filter(comp == "Regular Season") %>%
+        filter(season_num == CURRENT_SEASON_NUM, comp == "Regular Season") %>%
         group_by(comp,  bowler_id) %>%
         summarize(
             num_sessions = length(unique(session_id)),
@@ -91,7 +97,7 @@ league_standings_table_fn <- function() {
         # bringing in game wins
         left_join(
             scores_per_frame_df %>%
-                filter(comp == "Regular Season") %>%
+                filter(season_num == CURRENT_SEASON_NUM, comp == "Regular Season") %>%
                 filter(game_score == max(game_score), .by = c(session_id, game_num)) %>%
                 group_by(comp, bowler_id) %>%
                 summarize(num_game_wins = n(), .groups = "drop"),
@@ -101,7 +107,7 @@ league_standings_table_fn <- function() {
         # bringing in session wins
         left_join(
             scores_per_frame_df %>%
-                filter(comp == "Regular Season") %>%
+                filter(season_num == CURRENT_SEASON_NUM, comp == "Regular Season") %>%
                 group_by(comp, bowler_id, session_id) %>%
                 summarize(session_score = sum(game_score), .groups = "drop") %>%
                 filter(session_score == max(session_score), .by = session_id) %>%
@@ -117,7 +123,16 @@ league_standings_table_fn <- function() {
             # duplicating `avg_score` col, but converting values to NA if the
             # bowler has not met the cutoff for number of games played
             avg_score_with_cutoff =
-                if_else(num_games >= avg_score_games_qualify_cutoff, avg_score, NA_real_),
+                if_else(
+                    num_games >=
+                        (
+                            avg_score_games_qualify_cutoff %>%
+                                filter(season_num == CURRENT_SEASON_NUM) %>%
+                                .$cutoff
+                        ),
+                    avg_score,
+                    NA_real_
+                ),
             
             # ranking `total_score` and `avg_score_with_cutoff` cols
             across(
@@ -181,7 +196,15 @@ league_standings_table_fn <- function() {
         # `- 0.5` so that `>= avg_score_games_qualify_cutoff` is green
         formatStyle(
             columns = "# Games",
-            backgroundColor = styleInterval(avg_score_games_qualify_cutoff - 0.5, c("pink", "lightgreen"))
+            backgroundColor =
+                styleInterval(
+                    (
+                        avg_score_games_qualify_cutoff %>%
+                            filter(season_num == CURRENT_SEASON_NUM) %>%
+                            .$cutoff
+                    ) - 0.5,
+                    c("pink", "lightgreen")
+                )
         )
 }
 
@@ -226,12 +249,13 @@ league_stats_ui_fn <- function(league_stats_input_in) {
 # Outputting league summary stats as a DT::datatable object
 league_stats_summary_table_fn <- function(league_stats_input_in, return_as_dt = TRUE, group_by_game = FALSE) {
     
+    req(length(league_stats_input_in$season_nums) > 0)
     req(length(league_stats_input_in$comps) > 0)
     req(!(group_by_game & return_as_dt))
     
     # Summary stats calculated from `scores_per_frame_df`
     summary_stats_by_frame <- scores_per_frame_df %>%
-        filter(comp %in% league_stats_input_in$comps) %>%
+        filter(season_num %in% league_stats_input_in$season_nums, comp %in% league_stats_input_in$comps) %>%
         duplicate_df_for_leaguewide() %>%
         group_by(bowler_id) %>%
         summarize(
@@ -246,7 +270,7 @@ league_stats_summary_table_fn <- function(league_stats_input_in, return_as_dt = 
     
     # Intermediate table used for calculating stats from `scores_per_throw_df`
     scores_per_throw_df_long_clean <- scores_per_throw_df %>%
-        filter(comp %in% league_stats_input_in$comps) %>%
+        filter(season_num %in% league_stats_input_in$season_nums, comp %in% league_stats_input_in$comps) %>%
         
         # making each row correspond to a throw
         pivot_longer(cols = f1t1:f10t3, names_to = "frame_throw", values_to = "score") %>%
@@ -404,7 +428,7 @@ league_stats_summary_table_fn <- function(league_stats_input_in, return_as_dt = 
                 ),
             
             by = join_by(bowler_id)
-            ) %>%
+        ) %>%
         inner_join(summary_stats_first_throws, by = join_by(bowler_id)) %>%
         
         adding_bowler_names() %>%
@@ -496,10 +520,12 @@ league_stats_summary_table_fn <- function(league_stats_input_in, return_as_dt = 
 # TODO: this could also be graph, but not needed
 league_stats_avg_game_table_fn <- function(league_stats_input_in, return_as_dt = TRUE) {
     
+    req(length(league_stats_input_in$season_nums) > 0)
     req(length(league_stats_input_in$comps) > 0)
     
     avg_game_table <- scores_per_frame_df %>%
-        filter(comp %in% league_stats_input_in$comps) %>%
+        filter(season_num %in% league_stats_input_in$season_nums, comp %in% league_stats_input_in$comps) %>%
+        select(-season_num) %>%
         
         duplicate_df_for_leaguewide() %>%
         
@@ -539,6 +565,7 @@ league_stats_avg_game_table_fn <- function(league_stats_input_in, return_as_dt =
 # TODO: this could also be graph, but not needed
 league_stats_avg_frames_table_fn <- function(league_stats_input_in, return_as_dt = TRUE) {
     
+    req(length(league_stats_input_in$season_nums) > 0)
     req(length(league_stats_input_in$comps) > 0)
     
     avg_game_frame_table <- league_stats_input_in %>%
@@ -609,10 +636,11 @@ league_stats_avg_frames_table_fn <- function(league_stats_input_in, return_as_dt
 # Plotting histogram of league scores 
 league_stats_hist_scores_plt_fn <- function(league_stats_input_in, per_bowler) {
     
+    req(length(league_stats_input_in$season_nums) > 0)
     req(length(league_stats_input_in$comps) > 0)
     
     scores_per_frame_df %>%
-        filter(comp %in% league_stats_input_in$comps) %>%
+        filter(season_num %in% league_stats_input_in$season_nums, comp %in% league_stats_input_in$comps) %>%
         
         # calculating `game_score_label`, which is the x-axis of the plot
         # groups `game_score` into bins of size `bin_size`
@@ -694,10 +722,11 @@ league_stats_temporal_scores_plt_fn <- function(league_stats_input_in, per_bowle
     
     # TODO: if multiple sessions occur on single day, must edit this func
     
+    req(length(league_stats_input_in$season_nums) > 0)
     req(length(league_stats_input_in$comps) > 0)
     
     scores_per_frame_df %>%
-        filter(comp %in% league_stats_input_in$comps) %>%
+        filter(season_num %in% league_stats_input_in$season_nums, comp %in% league_stats_input_in$comps) %>%
         
         when(
             per_bowler ~ (.) %>%
@@ -822,7 +851,7 @@ league_stats_temporal_scores_plt_fn <- function(league_stats_input_in, per_bowle
         # hacky way to space legend
         scale_color_discrete(
             labels = sessions_df %>%
-                filter(comp %in% league_stats_input_in$comps) %>%
+                filter(season_num %in% league_stats_input_in$season_nums, comp %in% league_stats_input_in$comps) %>%
                 .$bowling_alley %>%
                 unique() %>%
                 sort() %>%

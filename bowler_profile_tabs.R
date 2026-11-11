@@ -12,7 +12,7 @@ bowler_profiles_tab_ui <-
                 width = 12, status = "success", solidHeader = TRUE, collapsible = FALSE,
                 
                 column(
-                    width = 6,
+                    width = 4,
                     pickerInput(
                         inputId = "bowler_profiles_bowler_id_input",
                         label = "Select Bowler",
@@ -25,11 +25,27 @@ bowler_profiles_tab_ui <-
                 ),
                 
                 column(
-                    width = 6,
+                    width = 4,
+                    pickerInput(
+                        inputId = "bowler_profiles_season_nums_input",
+                        label = "Seasons to Include",
+                        choices = unique(sessions_df$season_num),
+                        options = list(`actions-box` = TRUE),
+                        multiple = TRUE
+                    )
+                ),
+                
+                column(
+                    width = 4,
                     pickerInput(
                         inputId = "bowler_profiles_comps_input",
                         label = "Competitions to Include",
-                        choices = c("Friendly", "Regular Season", "Playoffs"),
+                        choices = sessions_df %>%
+                            .$comp %>%
+                            unique() %>%
+                            factor(levels = c("Friendly", "Regular Season", "Playoffs")) %>%
+                            sort() %>% 
+                            as.character(),
                         options = list(`actions-box` = TRUE),
                         multiple = TRUE
                     )
@@ -57,6 +73,7 @@ bowler_profiles_tab_ui <-
 bowler_profiles_output_ui_fn <- function(bowler_profiles_input_in) {
     
     req(length(bowler_profiles_input_in$bowler_id) == 1)
+    req(length(bowler_profiles_input_in$season_nums) > 0)
     req(length(bowler_profiles_input_in$comps) > 0)
     
     # Requiring that the selected bowler has appeared in at least one of the
@@ -65,6 +82,7 @@ bowler_profiles_output_ui_fn <- function(bowler_profiles_input_in) {
         scores_per_frame_df %>%
             filter(
                 bowler_id == bowler_profiles_input_in$bowler_id,
+                season_num %in% bowler_profiles_input_in$season_nums,
                 comp %in% bowler_profiles_input_in$comps
             ) %>%
             nrow() %>%
@@ -173,7 +191,7 @@ bowler_profiles_summary_table_fn <- function(bowler_profiles_input_in) {
     
     # number of games needed to qualify for qualified stat ranks
     num_games_needed_for_qualified_ranks <- scores_per_frame_df %>%
-        filter(comp %in% bowler_profiles_input_in$comps) %>%
+        filter(season_num %in% bowler_profiles_input_in$season_nums, comp %in% bowler_profiles_input_in$comps) %>%
         distinct(session_id, game_num) %>%
         nrow() %>%
         `*`(AVG_SCORE_FRAC_QUALIFY_CUTOFF) %>%
@@ -459,9 +477,9 @@ bowler_profile_scoresheets_table_fn <- function(bowler_profiles_input_in) {
                 
                 mutate(row_type = "per_frame", .before = everything())
         ) %>%
-        filter(comp %in% bowler_profiles_input_in$comps) %>%
+        filter(season_num %in% bowler_profiles_input_in$season_nums, comp %in% bowler_profiles_input_in$comps) %>%
         arrange(session_id, game_num, desc(row_type == "per_throw")) %>%
-        select(-comp, -bowler) %>%
+        select(-season_num, -comp, -bowler) %>%
         
         # bringing in session info
         left_join(

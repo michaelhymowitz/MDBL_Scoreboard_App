@@ -20,22 +20,22 @@ options(shiny.sanitize.errors = TRUE)
 
 # Adding Roboto font to shinyapps.io, so that it can be used in plots
 plot_font_name <- "Roboto"
-dir.create('~/.fonts')
-file.copy(str_c("www/", plot_font_name, "-Regular.ttf"), "~/.fonts")
-file.copy(str_c("www/", plot_font_name, "-Bold.ttf"), "~/.fonts")
-file.copy(str_c("www/", plot_font_name, "-Italic.ttf"), "~/.fonts")
-file.copy(str_c("www/", plot_font_name, "-BoldItalic.ttf"), "~/.fonts")
-system('fc-cache -f ~/.fonts')
+# dir.create('~/.fonts')
+# file.copy(str_c("www/", plot_font_name, "-Regular.ttf"), "~/.fonts")
+# file.copy(str_c("www/", plot_font_name, "-Bold.ttf"), "~/.fonts")
+# file.copy(str_c("www/", plot_font_name, "-Italic.ttf"), "~/.fonts")
+# file.copy(str_c("www/", plot_font_name, "-BoldItalic.ttf"), "~/.fonts")
+# system('fc-cache -f ~/.fonts')
 
-# # Uncomment when running locally
-# font_add(
-#     family = plot_font_name,
-#     regular = str_c("www/", plot_font_name, "-Regular.ttf"),
-#     bold = str_c("www/", plot_font_name, "-Bold.ttf"),
-#     italic = str_c("www/", plot_font_name, "-Italic.ttf"),
-#     bolditalic = str_c("www/", plot_font_name, "-BoldItalic.ttf"),
-# )
-# showtext_auto()
+# Uncomment when running locally
+font_add(
+    family = plot_font_name,
+    regular = str_c("www/", plot_font_name, "-Regular.ttf"),
+    bold = str_c("www/", plot_font_name, "-Bold.ttf"),
+    italic = str_c("www/", plot_font_name, "-Italic.ttf"),
+    bolditalic = str_c("www/", plot_font_name, "-BoldItalic.ttf"),
+)
+showtext_auto()
 
 
 showtext_opts(dpi = 72)
@@ -51,6 +51,9 @@ gs4_auth(cache = ".secrets", email = "michael.hymowitz@gmail.com")
 MDBL_SCOREBOARD_GSHEETS_LINK <- "https://docs.google.com/spreadsheets/d/1Yvsf1b1Z9yM1LpQ1pIAxdFiThs_vXni8Cm8__TLnfxo/edit?usp=sharing"
 
 # mdbl_scoreboard_raw_excel_filename <- "www/mdbl_scoreboard_raw_excel_2026_01_25_13_14_02_5803.xlsx"
+
+# Current Season #
+CURRENT_SEASON_NUM <- 2L
 
 # Fractional cutoff of # games to qualify for "Average Score" standings points
 AVG_SCORE_FRAC_QUALIFY_CUTOFF <- 0.5

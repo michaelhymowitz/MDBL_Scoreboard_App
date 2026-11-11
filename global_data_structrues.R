@@ -87,16 +87,17 @@ scores_pre_separating_throws_and_frame <- mdbl_scoreboard_raw_excel_filename %>%
     
     
     mutate(
+        bowler_id = if_else(str_detect(bowler_id, "^__celebrity__"), "__celebrity__", bowler_id),
         across(c(session_id, row_unit, bowler_id, bowler, f1t1:f10t3), as.character),
         across(f1t1:f10t3, function(col) str_remove(col, "\\.0$")),
         across(c(game_num, lane_num, game_score, game_score), as.integer)
     ) %>%
     left_join(
         sessions_df %>%
-            select(session_id, comp),
+            select(session_id, season_num, comp),
         by = join_by(session_id)
     ) %>%
-    relocate(comp, .after = session_id)
+    relocate(season_num, comp, .after = session_id)
 
 # Creating table of scores for each throw
 scores_per_throw_df <- scores_pre_separating_throws_and_frame %>%
@@ -111,7 +112,7 @@ scores_per_frame_df <- scores_pre_separating_throws_and_frame %>%
     
     # all frame data is in the col corresponding to the first throw of a frame
     select(
-        session_id, comp, game_num, lane_num, bowler_id, bowler,
+        session_id, season_num, comp, game_num, lane_num, bowler_id, bowler,
         ends_with("t1"), game_score
     ) %>%
     rename_with(function(col) str_remove(col, "t1$"), f1t1:f10t1) %>%
@@ -126,12 +127,12 @@ rm(scores_pre_separating_throws_and_frame)
 
 avg_score_games_qualify_cutoff <- scores_per_frame_df %>%
     filter(comp == "Regular Season") %>%
-    distinct(session_id, game_num) %>%
-    nrow() %>%
-    `*`(AVG_SCORE_FRAC_QUALIFY_CUTOFF) %>%
+    distinct(session_id, season_num, game_num) %>%
+    group_by(season_num) %>%
+    summarize(num_games = n()) %>%
     
     # rounding up to nearest integer
-    ceiling()
+    mutate(cutoff = ceiling(num_games * AVG_SCORE_FRAC_QUALIFY_CUTOFF))
 
 
 #### Contains the labels in the correct order to identify dates and games ######
