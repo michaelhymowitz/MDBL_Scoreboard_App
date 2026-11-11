@@ -20,22 +20,22 @@ options(shiny.sanitize.errors = TRUE)
 
 # Adding Roboto font to shinyapps.io, so that it can be used in plots
 plot_font_name <- "Roboto"
-# dir.create('~/.fonts')
-# file.copy(str_c("www/", plot_font_name, "-Regular.ttf"), "~/.fonts")
-# file.copy(str_c("www/", plot_font_name, "-Bold.ttf"), "~/.fonts")
-# file.copy(str_c("www/", plot_font_name, "-Italic.ttf"), "~/.fonts")
-# file.copy(str_c("www/", plot_font_name, "-BoldItalic.ttf"), "~/.fonts")
-# system('fc-cache -f ~/.fonts')
+dir.create('~/.fonts')
+file.copy(str_c("www/", plot_font_name, "-Regular.ttf"), "~/.fonts")
+file.copy(str_c("www/", plot_font_name, "-Bold.ttf"), "~/.fonts")
+file.copy(str_c("www/", plot_font_name, "-Italic.ttf"), "~/.fonts")
+file.copy(str_c("www/", plot_font_name, "-BoldItalic.ttf"), "~/.fonts")
+system('fc-cache -f ~/.fonts')
 
 # Uncomment when running locally
-font_add(
-    family = plot_font_name,
-    regular = str_c("www/", plot_font_name, "-Regular.ttf"),
-    bold = str_c("www/", plot_font_name, "-Bold.ttf"),
-    italic = str_c("www/", plot_font_name, "-Italic.ttf"),
-    bolditalic = str_c("www/", plot_font_name, "-BoldItalic.ttf"),
-)
-showtext_auto()
+# font_add(
+#     family = plot_font_name,
+#     regular = str_c("www/", plot_font_name, "-Regular.ttf"),
+#     bold = str_c("www/", plot_font_name, "-Bold.ttf"),
+#     italic = str_c("www/", plot_font_name, "-Italic.ttf"),
+#     bolditalic = str_c("www/", plot_font_name, "-BoldItalic.ttf"),
+# )
+# showtext_auto()
 
 
 showtext_opts(dpi = 72)
